@@ -22,17 +22,15 @@ ruleset manage_sensors {
         }
 
         all_temperatures = function() {
-            ent:sensors.map(
-                function(s) {
-                    eci = s.get("eci")
+            Subscriptions:established("Tx_role", "sensor").map(
+                function(sub) {
+                    eci = sub{"Tx"}
                     args = {}
-                    host = "http://localhost:8080";
+                    host = (sub{"Tx_host"} == null) => "http://localhost:8080" | sub{"Tx_host"};
                     url = host + "/sky/cloud/" + eci + "/temperature_store/temperatures";
                     response = http:get(url,args);
                     answer = response{"content"}.decode();
                     answer
-                    // ret = wrangler:skyQuery(eci, "temperature_store", "temperatures", args)
-                    // ret
                 }
             )
         }
@@ -45,10 +43,49 @@ ruleset manage_sensors {
                 },
                 { 
                     "domain": "sensor", "type": "unneeded_sensor", "attrs": [ "name" ] 
+                },
+                {
+                    "domain": "manager", "type": "add_sub", "attrs": [ "eci", "name", "Rx_role", "Tx_role", "wellKnown_Tx" ]
+                },
+                {
+                    "domain": "sensor", "type": "subscribe", "attrs": [ "eci", "name", "wellKnown_Tx" ]
                 }
             ] 
         }
 
+    }
+
+    rule make_sensor_subscription {
+        select when sensor:subscribe
+        send_directive("test", {"hello": "world"})
+        fired {
+            raise manager event "add_sub"
+                attributes 
+                {
+                    "name": event:attr("name"),
+                    "Rx_role": "manager",
+                    "Tx_role": "sensor",
+                    "wellKnown_Tx": event:attr("wellKnown_Tx")
+                    
+                };
+        }
+        
+    }
+
+    rule make_subscription {
+        select when manager:add_sub
+        send_directive("test", {"hello": "world"})
+        fired {
+            raise wrangler event "subscription"
+                attributes
+                { 
+                    "name": event:attr("name"),
+                    "Rx_role": event:attr("Rx_role"),
+                    "Tx_role": event:attr("Tx_role"),
+                    "channel_type": "subscription",
+                    "wellKnown_Tx": event:attr("wellKnown_Tx") 
+                } 
+        )
     }
     
     rule on_new_sensor {
@@ -125,9 +162,14 @@ ruleset manage_sensors {
             )
         fired {
             ent:sensors := ent:sensors.defaultsTo([]).union([newSensor])
+            raise sensor event "subscribe"
+                attributes {
+                    "name": name,
+                    "wellKnown_Tx": eci
+                }
         }
     }
-
+    // HEsekZzRb64ZMkMWd5DRYU
     // after pico is done being made, send a sensor:profile_updated event to prime it
 
 
