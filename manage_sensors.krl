@@ -49,7 +49,7 @@ ruleset manage_sensors {
                     "domain": "manager", "type": "add_sub", "attrs": [ "eci", "name", "Rx_role", "Tx_role", "wellKnown_Tx" ]
                 },
                 {
-                    "domain": "sensor", "type": "subscribe", "attrs": [ "eci", "name", "wellKnown_Tx" ]
+                    "domain": "sensor", "type": "subscribe", "attrs": [ "name", "wellKnown_Tx" ]
                 }
             ] 
         }
@@ -86,7 +86,7 @@ ruleset manage_sensors {
                     "channel_type": "subscription",
                     "wellKnown_Tx": event:attr("wellKnown_Tx") 
                 } 
-        )
+        }
     }
     
     rule on_new_sensor {
