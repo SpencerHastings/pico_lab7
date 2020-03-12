@@ -50,6 +50,9 @@ ruleset manage_sensors {
                 },
                 {
                     "domain": "sensor", "type": "subscribe", "attrs": [ "name", "wellKnown_Tx" ]
+                },
+                {
+                    "domain": "sensor", "type": "subscribe_out", "attrs": [ "name", "wellKnown_Tx", "Tx_host" ]
                 }
             ] 
         }
@@ -85,6 +88,40 @@ ruleset manage_sensors {
                     "Tx_role": event:attr("Tx_role"),
                     "channel_type": "subscription",
                     "wellKnown_Tx": event:attr("wellKnown_Tx") 
+                } 
+        }
+    }
+
+    rule make_outside_sensor_subscription {
+        select when sensor:subscribe_out
+        send_directive("test", {"hello": "world"})
+        fired {
+            raise manager event "add_sub_out"
+                attributes 
+                {
+                    "name": event:attr("name"),
+                    "Rx_role": "manager",
+                    "Tx_role": "sensor",
+                    "wellKnown_Tx": event:attr("wellKnown_Tx"),
+                    "Tx_host": event:attr("Tx_host")
+                };
+        }
+        
+    }
+
+    rule make_outside_subscription {
+        select when manager:add_sub_out
+        send_directive("test", {"hello": "world"})
+        fired {
+            raise wrangler event "subscription"
+                attributes
+                { 
+                    "name": event:attr("name"),
+                    "Rx_role": event:attr("Rx_role"),
+                    "Tx_role": event:attr("Tx_role"),
+                    "channel_type": "subscription",
+                    "wellKnown_Tx": event:attr("wellKnown_Tx"),
+                    "Tx_host": event:attr("Tx_host")
                 } 
         }
     }
