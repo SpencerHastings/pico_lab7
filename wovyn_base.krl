@@ -3,11 +3,7 @@ ruleset wovyn_base {
     meta {
         shares __testing
         use module sensor_profile alias profile
-        use module twilio_lesson_keys
-        use module twilio_m alias twilio
-            with account_sid = keys:twilio{"account_sid"}
-                auth_token =  keys:twilio{"auth_token"}
-        
+        use module io.picolabs.subscription alias Subscriptions
     }
 
     global {
@@ -65,24 +61,24 @@ ruleset wovyn_base {
         send_directive("temp_reading", {"is_violation": is_violation})
         fired {
             raise wovyn event "threshold_violation" 
-                attributes {"temperature": temperature,"timestamp": event:attr("timestamp") , "threshold": temperature_threshold}
+                attributes {"temperature": temperature,"timestamp": event:attr("timestamp") , "threshold": profile:get_threshold()}
                 if is_violation
         }
     }
 
     rule threshold_notification {
         select when wovyn:threshold_violation
-        pre {
-            message = "The current temperature of " + 
-                event:attr("temperature") +
-                " has violated the threshold of " +
-                event:attr("threshold") +
-                " at " +
-                event:attr("timestamp") + 
-                "."
-        }
-        twilio:send_sms(profile:get_full_phone_number(),
-                       "+12029911769",
-                       message)
+        foreach Subscriptions:established("Tx_role","manager") setting (subscription)
+            event:send
+            (
+                { 
+                    "eci": subscription{"Tx"}, 
+                    "eid": "1337",
+                    "domain": "wovyn", 
+                    "type": "threshold_violation",
+                    "attrs": {"temperature": event:attr("temperature"),"timestamp": event:attr("timestamp") , "threshold": event:attr("threshold")}
+                },
+                subscription{"Tx_host"}
+            )
     }
 }
