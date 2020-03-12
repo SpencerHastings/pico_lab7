@@ -3,6 +3,7 @@ ruleset manage_sensors {
     meta {
         provides all_temperatures
         shares __testing, all_temperatures
+        use module io.picolabs.subscription alias Subscriptions
     }
 
     global {
